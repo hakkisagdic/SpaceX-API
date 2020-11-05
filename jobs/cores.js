@@ -26,16 +26,20 @@ module.exports = async () => {
     const result = await got(REDDIT_CORES);
     const $ = cheerio.load(result.body);
 
-    const active = $('body > div.content > div > div > table:nth-child(14) > tbody').text();
+    const active = $('body > div.content > div > div > table:nth-child(15) > tbody').text();
     const activeRow = active.split('\n').filter((v) => v !== '');
     const activeCores = activeRow.filter((value, index) => index % 7 === 0);
+    if (!activeCores.length) {
+      throw new Error('No active cores found');
+    }
     const activeStatus = activeRow.filter((value, index) => (index + 1) % 7 === 0);
     const activeUpdates = activeCores.map(async (coreSerial, index) => {
       const coreId = cores.docs.find((core) => core.serial === coreSerial);
       if (coreId && coreId.id) {
+        console.log(activeStatus[parseInt(index, 10)]);
         await got.patch(`${SPACEX_API}/cores/${coreId.id}`, {
           json: {
-            details: activeStatus[parseInt(index, 10)],
+            last_update: activeStatus[parseInt(index, 10)],
             status: 'active',
           },
           headers: {
@@ -47,16 +51,19 @@ module.exports = async () => {
     await Promise.all(activeUpdates);
     logger.info('Active cores updated');
 
-    const unknown = $('div.md:nth-child(2) > table:nth-child(17) > tbody:nth-child(2)').text();
+    const unknown = $('body > div.content > div > div > table:nth-child(18) > tbody').text();
     const unknownRow = unknown.split('\n').filter((v) => v !== '');
     const unknownCores = unknownRow.filter((value, index) => index % 6 === 0);
+    if (!unknownCores.length) {
+      throw new Error('No unknown cores found');
+    }
     const unknownStatus = unknownRow.filter((value, index) => (index + 1) % 6 === 0).map((x) => x.replace(/\[source\]/gi, ''));
     const unknownUpdates = unknownCores.map(async (coreSerial, index) => {
       const coreId = cores.docs.find((core) => core.serial === coreSerial);
       if (coreId && coreId.id) {
         await got.patch(`${SPACEX_API}/cores/${coreId.id}`, {
           json: {
-            details: unknownStatus[parseInt(index, 10)],
+            last_update: unknownStatus[parseInt(index, 10)],
             status: 'unknown',
           },
           headers: {
@@ -68,16 +75,19 @@ module.exports = async () => {
     await Promise.all(unknownUpdates);
     logger.info('Unknown cores updated');
 
-    const inactive = $('div.md:nth-child(2) > table:nth-child(20) > tbody:nth-child(2)').text();
+    const inactive = $('body > div.content > div > div > table:nth-child(21) > tbody').text();
     const inactiveRow = inactive.split('\n').filter((v) => v !== '');
     const inactiveCores = inactiveRow.filter((value, index) => index % 6 === 0);
+    if (!inactiveCores.length) {
+      throw new Error('No inactive cores found');
+    }
     const inactiveStatus = inactiveRow.filter((value, index) => (index + 1) % 6 === 0).map((x) => x.replace(/\[source\]/gi, ''));
     const inactiveUpdates = inactiveCores.map(async (coreSerial, index) => {
       const coreId = cores.docs.find((core) => core.serial === coreSerial);
       if (coreId && coreId.id) {
         await got.patch(`${SPACEX_API}/cores/${coreId.id}`, {
           json: {
-            details: inactiveStatus[parseInt(index, 10)],
+            last_update: inactiveStatus[parseInt(index, 10)],
             status: 'inactive',
           },
           headers: {
@@ -89,9 +99,12 @@ module.exports = async () => {
     await Promise.all(inactiveUpdates);
     logger.info('Inactive cores updated');
 
-    const lost = $('div.md:nth-child(2) > table:nth-child(24) > tbody:nth-child(2)').text();
+    const lost = $('body > div.content > div > div > table:nth-child(25) > tbody').text();
     const lostRow = lost.split('\n').filter((v) => v !== '');
     const lostCores = lostRow.filter((value, index) => index % 7 === 0);
+    if (!lostCores.length) {
+      throw new Error('No lost cores found');
+    }
     const lostStatus = lostRow.filter((value, index) => (index + 1) % 7 === 0).map((x) => x.replace(/\[source\]/gi, ''));
     const lostUpdates = lostCores.map(async (coreSerial, index) => {
       const coreId = cores.docs.find((core) => core.serial === coreSerial);
@@ -104,7 +117,7 @@ module.exports = async () => {
         }
         await got.patch(`${SPACEX_API}/cores/${coreId.id}`, {
           json: {
-            details: lostStatus[parseInt(index, 10)],
+            last_update: lostStatus[parseInt(index, 10)],
             status,
           },
           headers: {
@@ -207,7 +220,7 @@ module.exports = async () => {
 
         await got.patch(`${SPACEX_API}/cores/${core.id}`, {
           json: {
-            reuse_count: core.launches.length - 1,
+            reuse_count: (core.launches.length > 0) ? core.launches.length - 1 : 0,
             rtls_attempts: rtlsAttempts.totalDocs,
             rtls_landings: rtlsLandings.totalDocs,
             asds_attempts: asdsAttempts.totalDocs,

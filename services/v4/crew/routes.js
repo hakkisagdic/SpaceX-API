@@ -1,14 +1,13 @@
 const Router = require('koa-router');
 const Crew = require('./model');
-const { auth, authz } = require('../../../middleware');
+const { auth, authz, cache } = require('../../../middleware');
 
 const router = new Router({
   prefix: '/crew',
 });
 
 // Get all crew
-router.get('/', async (ctx) => {
-  ctx.state.cache = 300;
+router.get('/', cache(300), async (ctx) => {
   try {
     const result = await Crew.find({});
     ctx.status = 200;
@@ -19,23 +18,17 @@ router.get('/', async (ctx) => {
 });
 
 // Get one crew member
-router.get('/:id', async (ctx) => {
-  ctx.state.cache = 300;
-  try {
-    const result = await Crew.findById(ctx.params.id);
-    if (!result) {
-      ctx.throw(404);
-    }
-    ctx.status = 200;
-    ctx.body = result;
-  } catch (error) {
-    ctx.throw(400, error.message);
+router.get('/:id', cache(300), async (ctx) => {
+  const result = await Crew.findById(ctx.params.id);
+  if (!result) {
+    ctx.throw(404);
   }
+  ctx.status = 200;
+  ctx.body = result;
 });
 
 // Query crew members
-router.post('/query', async (ctx) => {
-  ctx.state.cache = 300;
+router.post('/query', cache(300), async (ctx) => {
   const { query = {}, options = {} } = ctx.request.body;
   try {
     const result = await Crew.paginate(query, options);

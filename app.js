@@ -1,10 +1,12 @@
+const conditional = require('koa-conditional-get');
+const etag = require('koa-etag');
 const cors = require('koa2-cors');
 const helmet = require('koa-helmet');
 const Koa = require('koa');
 const bodyParser = require('koa-bodyparser');
 const mongoose = require('mongoose');
 const { requestLogger, logger } = require('./middleware/logger');
-const { responseTime, cache, errors } = require('./middleware');
+const { responseTime, errors } = require('./middleware');
 const { v4 } = require('./services');
 
 const app = new Koa();
@@ -38,6 +40,10 @@ app.silent = true;
 // Error handler
 app.use(errors);
 
+app.use(conditional());
+
+app.use(etag());
+
 app.use(bodyParser());
 
 // HTTP header security
@@ -56,11 +62,6 @@ app.use(responseTime);
 
 // Request logging
 app.use(requestLogger);
-
-// Only use Redis in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(cache.middleware);
-}
 
 // V4 routes
 app.use(v4.routes());

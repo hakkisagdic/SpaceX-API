@@ -1,14 +1,13 @@
 const Router = require('koa-router');
 const Core = require('./model');
-const { auth, authz } = require('../../../middleware');
+const { auth, authz, cache } = require('../../../middleware');
 
 const router = new Router({
   prefix: '/cores',
 });
 
 // Get all cores
-router.get('/', async (ctx) => {
-  ctx.state.cache = 300;
+router.get('/', cache(300), async (ctx) => {
   try {
     const result = await Core.find({});
     ctx.status = 200;
@@ -19,23 +18,17 @@ router.get('/', async (ctx) => {
 });
 
 // Get one core
-router.get('/:id', async (ctx) => {
-  ctx.state.cache = 300;
-  try {
-    const result = await Core.findById(ctx.params.id);
-    if (!result) {
-      ctx.throw(404);
-    }
-    ctx.status = 200;
-    ctx.body = result;
-  } catch (error) {
-    ctx.throw(400, error.message);
+router.get('/:id', cache(300), async (ctx) => {
+  const result = await Core.findById(ctx.params.id);
+  if (!result) {
+    ctx.throw(404);
   }
+  ctx.status = 200;
+  ctx.body = result;
 });
 
 // Query cores
-router.post('/query', async (ctx) => {
-  ctx.state.cache = 300;
+router.post('/query', cache(300), async (ctx) => {
   const { query = {}, options = {} } = ctx.request.body;
   try {
     const result = await Core.paginate(query, options);
